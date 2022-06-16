@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 
 	"encore.dev/storage/sqldb"
 )
@@ -22,8 +23,12 @@ type SubmitNewsParams struct {
 }
 
 // Submit a news.
-//encore:api public method=POST path=/news
+//encore:api private method=POST path=/news
 func Submit(ctx context.Context, p *SubmitNewsParams) (*News, error) {
+	if (*&p.Text == "" && *&p.URL == "") {
+		return nil, errors.New("must provide either text or url")
+	}
+
 	id, err := generateID()
 	if err != nil {
 		return nil, err
@@ -68,4 +73,25 @@ func Get(ctx context.Context, id string) (*News, error) {
 		WHERE id = $1
 	`, id).Scan(&n.Title, &n.URL, &n.Text)
 	return n, err
+}
+
+// Query retrieves and paginates news. 
+func Query(ctx context.Context) ([]*News, error) {
+	rows, err := sqldb.Query(ctx, `
+		SELECT id, title, url, text FROM news
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var news []*News
+	for rows.Next() {
+		n := &News{}
+		if err := rows.Scan(&n.ID, &n.Title, &n.URL, &n.Text); err != nil {
+			return nil, err
+		}
+		news = append(news, n)
+	}
+	return news, nil
 }

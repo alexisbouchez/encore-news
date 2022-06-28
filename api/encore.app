@@ -1,3 +1,3 @@
 {
-	"id": "encore-news-36gi",
+	"id": "api-myy2",
 }
